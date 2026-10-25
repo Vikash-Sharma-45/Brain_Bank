@@ -95,3 +95,208 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.6);
 }
+
+.markdown-content .markdown-callout {
+  --callout-accent: #1d4ed8;
+  --callout-background: #eff6ff;
+  margin: 1.25rem 0;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--callout-accent), transparent 70%);
+  border-left: 4px solid var(--callout-accent);
+  border-radius: 0.75rem;
+  background: var(--callout-background);
+  color: var(--color-foreground);
+}
+
+.markdown-content .markdown-callout.callout-info {
+  --callout-accent: #0369a1;
+  --callout-background: #f0f9ff;
+}
+
+.markdown-content .markdown-callout.callout-tip {
+  --callout-accent: #047857;
+  --callout-background: #ecfdf5;
+}
+
+.markdown-content .markdown-callout.callout-warning {
+  --callout-accent: #92400e;
+  --callout-background: #fffbeb;
+}
+
+.markdown-content .markdown-callout.callout-danger {
+  --callout-accent: #b91c1c;
+  --callout-background: #fef2f2;
+}
+
+.markdown-content .markdown-callout.callout-example {
+  --callout-accent: #6d28d9;
+  --callout-background: #f5f3ff;
+}
+
+.markdown-content .markdown-callout.callout-quote {
+  --callout-accent: #475569;
+  --callout-background: #f8fafc;
+}
+
+.markdown-content .markdown-callout.callout-definition {
+  --callout-accent: #0e7490;
+  --callout-background: #ecfeff;
+}
+
+.markdown-content .markdown-callout.callout-theorem {
+  --callout-accent: #6d28d9;
+  --callout-background: #f5f3ff;
+}
+
+.markdown-content .markdown-callout.callout-important {
+  --callout-accent: #a21caf;
+  --callout-background: #fdf4ff;
+}
+
+.markdown-content .markdown-callout.callout-question {
+  --callout-accent: #1d4ed8;
+  --callout-background: #eff6ff;
+}
+
+.markdown-content .markdown-callout-title,
+.markdown-content .markdown-callout summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--callout-accent);
+  font-weight: 700;
+  font-style: normal;
+}
+
+.markdown-content .markdown-callout summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.markdown-content .markdown-callout summary::-webkit-details-marker {
+  display: none;
+}
+
+.markdown-content .markdown-callout-body {
+  margin-top: 0.5rem;
+  color: var(--color-foreground);
+  font-style: normal;
+}
+
+.markdown-content .markdown-callout-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content .markdown-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content .markdown-callout-body blockquote {
+  font-style: normal;
+}
+
+.dark .markdown-content .markdown-callout {
+  --callout-accent: #93c5fd;
+  --callout-background: #172554;
+}
+
+.dark .markdown-content .markdown-callout.callout-info {
+  --callout-accent: #7dd3fc;
+  --callout-background: #082f49;
+}
+
+.dark .markdown-content .markdown-callout.callout-tip {
+  --callout-accent: #6ee7b7;
+  --callout-background: #022c22;
+}
+
+.dark .markdown-content .markdown-callout.callout-warning {
+  --callout-accent: #fcd34d;
+  --callout-background: #451a03;
+}
+
+.dark .markdown-content .markdown-callout.callout-danger {
+  --callout-accent: #fca5a5;
+  --callout-background: #450a0a;
+}
+
+.dark .markdown-content .markdown-callout.callout-example,
+.dark .markdown-content .markdown-callout.callout-theorem {
+  --callout-accent: #c4b5fd;
+  --callout-background: #2e1065;
+}
+
+.dark .markdown-content .markdown-callout.callout-quote {
+  --callout-accent: #cbd5e1;
+  --callout-background: #1e293b;
+}
+
+.dark .markdown-content .markdown-callout.callout-definition {
+  --callout-accent: #67e8f9;
+  --callout-background: #083344;
+}
+
+.dark .markdown-content .markdown-callout.callout-important {
+  --callout-accent: #f0abfc;
+  --callout-background: #4a044e;
+}
+
+.dark .markdown-content .markdown-callout.callout-question {
+  --callout-accent: #93c5fd;
+  --callout-background: #172554;
+}
+
+.sepia .markdown-content .markdown-callout {
+  --callout-accent: #1e40af;
+  --callout-background: #eee4d0;
+}
+
+.sepia .markdown-content .markdown-callout.callout-info {
+  --callout-accent: #075985;
+  --callout-background: #e6e4d3;
+}
+
+.sepia .markdown-content .markdown-callout.callout-tip {
+  --callout-accent: #065f46;
+  --callout-background: #e5ead9;
+}
+
+.sepia .markdown-content .markdown-callout.callout-warning {
+  --callout-accent: #78350f;
+  --callout-background: #f1e3c9;
+}
+
+.sepia .markdown-content .markdown-callout.callout-danger {
+  --callout-accent: #991b1b;
+  --callout-background: #f0ded3;
+}
+
+.sepia .markdown-content .markdown-callout.callout-example,
+.sepia .markdown-content .markdown-callout.callout-theorem {
+  --callout-accent: #5b21b6;
+  --callout-background: #e9dfd2;
+}
+
+.sepia .markdown-content .markdown-callout.callout-quote {
+  --callout-accent: #57534e;
+  --callout-background: #eee6d4;
+}
+
+.sepia .markdown-content .markdown-callout.callout-definition {
+  --callout-accent: #155e75;
+  --callout-background: #e4e6d5;
+}
+
+.sepia .markdown-content .markdown-callout.callout-important {
+  --callout-accent: #86198f;
+  --callout-background: #eee0d4;
+}
+
+.sepia .markdown-content .markdown-callout.callout-question {
+  --callout-accent: #1e40af;
+  --callout-background: #eee4d0;
+}

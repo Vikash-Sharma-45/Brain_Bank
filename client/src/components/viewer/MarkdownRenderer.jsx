@@ -1,9 +1,111 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
-import { Check, Copy } from 'lucide-react';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import {
+  BookOpen,
+  Check,
+  CircleHelp,
+  FlaskConical,
+  Info,
+  Lightbulb,
+  OctagonAlert,
+  Pencil,
+  Quote,
+  ShieldAlert,
+  Sigma,
+  TriangleAlert,
+  Copy,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
+import remarkCallouts from '../../lib/remarkCallouts';
+
+const calloutStyles = [
+  'note',
+  'info',
+  'tip',
+  'warning',
+  'danger',
+  'example',
+  'quote',
+  'definition',
+  'theorem',
+  'important',
+  'question',
+];
+const calloutClassNames = [
+  'markdown-callout',
+  'markdown-callout-title',
+  'markdown-callout-body',
+  ...calloutStyles.flatMap((type) => [`callout-${type}`, `callout-title-${type}`]),
+];
+
+const attributesWithCalloutClasses = (tagName) => [
+  ...(defaultSchema.attributes[tagName] || []),
+  ['className', ...calloutClassNames],
+];
+
+const markdownSanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [
+      ...(defaultSchema.attributes.code || []),
+      ['className', 'math-inline', 'math-display'],
+    ],
+    div: attributesWithCalloutClasses('div'),
+    details: attributesWithCalloutClasses('details'),
+    summary: attributesWithCalloutClasses('summary'),
+  },
+};
+
+const calloutIcons = {
+  note: Pencil,
+  info: Info,
+  tip: Lightbulb,
+  warning: TriangleAlert,
+  danger: OctagonAlert,
+  example: FlaskConical,
+  quote: Quote,
+  definition: BookOpen,
+  theorem: Sigma,
+  important: ShieldAlert,
+  question: CircleHelp,
+};
+
+function CalloutTitle({ className, children, as: Element = 'div' }) {
+  const type = className?.match(/callout-title-([a-z]+)/)?.[1] || 'note';
+  const Icon = calloutIcons[type] || Pencil;
+
+  return (
+    <Element className={className}>
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>{children}</span>
+    </Element>
+  );
+}
+
+function MarkdownDiv({ className, children }) {
+  if (className?.split(/\s+/).includes('markdown-callout-title')) {
+    return (
+      <CalloutTitle className={className}>
+        {children}
+      </CalloutTitle>
+    );
+  }
+
+  return <div className={className}>{children}</div>;
+}
+
+function MarkdownSummary({ className, children }) {
+  return (
+    <CalloutTitle as="summary" className={className}>
+      {children}
+    </CalloutTitle>
+  );
+}
 
 // Slugify string for heading anchor IDs
 function slugify(text) {
@@ -83,12 +185,18 @@ export function MarkdownRenderer({
     onHeadingsExtracted(extracted);
   }, [content, onHeadingsExtracted]);
 
-  // Font size classes
+  // Reader font size is applied only to the article so KaTeX can size its children.
   const fontSizes = {
-    sm: 'text-sm leading-relaxed',
-    base: 'text-base leading-relaxed',
-    lg: 'text-lg leading-loose',
-    xl: 'text-xl leading-loose',
+    sm: '0.875rem',
+    base: '1rem',
+    lg: '1.125rem',
+    xl: '1.25rem',
+  };
+  const lineHeights = {
+    sm: 'leading-relaxed',
+    base: 'leading-relaxed',
+    lg: 'leading-loose',
+    xl: 'leading-loose',
   };
 
   const components = useMemo(
@@ -135,6 +243,13 @@ export function MarkdownRenderer({
           {children}
         </blockquote>
       ),
+      div: MarkdownDiv,
+      details: ({ className, open, children }) => (
+        <details className={className} open={open}>
+          {children}
+        </details>
+      ),
+      summary: MarkdownSummary,
       table: ({ children }) => (
         <div className="my-6 overflow-x-auto rounded-xl border border-border">
           <table className="w-full border-collapse text-left text-sm">{children}</table>
@@ -175,14 +290,18 @@ export function MarkdownRenderer({
   return (
     <article
       className={cn(
-        'max-w-none transition-all',
-        fontSizes[fontSize] || fontSizes.base,
+        'markdown-content max-w-none transition-all',
+        lineHeights[fontSize] || lineHeights.base,
         fontFamily === 'serif' ? 'font-serif' : 'font-sans'
       )}
+      style={{ fontSize: fontSizes[fontSize] || fontSizes.base }}
     >
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
+        remarkPlugins={[remarkGfm, remarkMath, remarkCallouts]}
+        rehypePlugins={[
+          [rehypeSanitize, markdownSanitizeSchema],
+          [rehypeKatex, { throwOnError: false, errorColor: '#cc0000' }],
+        ]}
         components={components}
       >
         {content}

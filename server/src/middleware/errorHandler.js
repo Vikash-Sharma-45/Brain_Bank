@@ -14,6 +14,11 @@ const errorHandler = (err, _req, res, _next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal server error';
 
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = 413;
+    message = 'File exceeds the 25 MB upload limit';
+  }
+
   // Mongoose validation error
   if (err.name === 'ValidationError') {
     statusCode = 400;

@@ -431,6 +431,18 @@ export function NoteViewer() {
             </h1>
           </div>
 
+          {note.fileError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+            >
+              <p className="font-semibold">{note.fileError}</p>
+              <p className="mt-1 text-xs">
+                This original file is not available in storage. Please contact an administrator.
+              </p>
+            </div>
+          )}
+
           {/* Content Rendering based on type */}
           <div className="py-2">
             {note.type === 'markdown' && (
@@ -451,7 +463,7 @@ export function NoteViewer() {
               />
             )}
 
-            {note.type === 'pdf' && (
+            {note.type === 'pdf' && note.signedUrl && (
               <PdfViewer
                 fileUrl={note.signedUrl}
                 initialPage={savedPosition || 1}

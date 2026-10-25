@@ -1,0 +1,78 @@
+.markdown-content .katex {
+  font-size: 1.21em;
+  line-height: 1.2;
+  font-style: normal;
+  text-indent: 0;
+}
+
+.markdown-content li {
+  line-height: 1.65;
+}
+
+.markdown-content .katex-display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+.markdown-content .katex-display > .katex {
+  max-width: none;
+  overflow: visible;
+}
+
+.markdown-content .markdown-callout-body .katex,
+.markdown-content blockquote .katex {
+  line-height: 1.2;
+  font-style: normal;
+  text-indent: 0;
+}
+
+.markdown-content .markdown-callout-body .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-content .markdown-callout summary {
+  outline: none;
+}
+
+.markdown-content .markdown-callout summary:focus-visible {
+  outline: 2px solid var(--callout-accent);
+  outline-offset: 3px;
+}
+
+.markdown-content .markdown-callout summary::after {
+  content: '▸';
+  margin-left: auto;
+  font-size: 1.1em;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.markdown-content .markdown-callout[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.markdown-content .markdown-callout-body .markdown-callout {
+  min-width: 0;
+  max-width: 100%;
+  width: calc(100% - 0.75rem);
+  margin-left: 0.75rem;
+}
+
+.markdown-content .markdown-callout-body .markdown-callout .katex-display,
+.markdown-content .markdown-callout-body .markdown-callout .overflow-x-auto {
+  max-width: 100%;
+}
+
+.markdown-content .markdown-callout-body .overflow-x-auto {
+  max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-content .markdown-callout summary::after {
+    transition: none;
+  }
+}

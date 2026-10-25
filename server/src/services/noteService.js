@@ -5,6 +5,7 @@ import sanitizeHtml from 'sanitize-html';
 import { Note, Subject } from '../models/index.js';
 import * as storage from './storage.js';
 import AppError from '../utils/AppError.js';
+import { createSearchSnippet } from '../utils/searchSnippet.js';
 
 // ── Helpers ──────────────────────────────────
 
@@ -35,6 +36,17 @@ const cleanHtml = (html) =>
     },
   });
 
+const cleanupUploadedFile = async (key, cause) => {
+  try {
+    await storage.deleteFile(key);
+  } catch (cleanupError) {
+    throw new AggregateError(
+      [cause, cleanupError],
+      `Operation failed and uploaded file cleanup failed: ${cleanupError.message}`
+    );
+  }
+};
+
 /**
  * Process an uploaded file and return the fields to store on the Note.
  */
@@ -51,55 +63,57 @@ const processFile = async (file) => {
     extractedText: '',
   };
 
-  switch (type) {
-    case 'markdown': {
-      // Store raw markdown text in DB, no R2 upload needed
-      result.content = file.buffer.toString('utf-8');
-      result.extractedText = result.content.substring(0, 50000); // cap for index
-      break;
-    }
-
-    case 'pdf': {
-      // Upload to R2, extract text for search
-      const { key } = await storage.uploadFile(
-        file.buffer,
-        file.originalname,
-        file.mimetype
-      );
-      result.fileKey = key;
-
-      try {
-        const parsed = await pdfParse(file.buffer);
-        result.extractedText = parsed.text.substring(0, 50000);
-      } catch {
-        // Some PDFs are image-only; text extraction fails silently
-        result.extractedText = '';
+  try {
+    switch (type) {
+      case 'markdown': {
+        result.content = file.buffer.toString('utf-8');
+        result.extractedText = result.content.substring(0, 50000); // cap for index
+        break;
       }
-      break;
+
+      case 'pdf': {
+        const { key } = await storage.uploadFile(
+          file.buffer,
+          file.originalname,
+          file.mimetype
+        );
+        result.fileKey = key;
+
+        try {
+          const parsed = await pdfParse(file.buffer);
+          result.extractedText = parsed.text.substring(0, 50000);
+        } catch {
+          // Some PDFs are image-only; text extraction fails silently
+          result.extractedText = '';
+        }
+        break;
+      }
+
+      case 'docx': {
+        const { key } = await storage.uploadFile(
+          file.buffer,
+          file.originalname,
+          file.mimetype
+        );
+        result.fileKey = key;
+
+        const { value: html } = await mammoth.convertToHtml({
+          buffer: file.buffer,
+        });
+        result.content = cleanHtml(html);
+
+        const { value: text } = await mammoth.extractRawText({
+          buffer: file.buffer,
+        });
+        result.extractedText = text.substring(0, 50000);
+        break;
+      }
     }
-
-    case 'docx': {
-      // Upload original to R2 for download
-      const { key } = await storage.uploadFile(
-        file.buffer,
-        file.originalname,
-        file.mimetype
-      );
-      result.fileKey = key;
-
-      // Convert to sanitised HTML and store in DB
-      const { value: html } = await mammoth.convertToHtml({
-        buffer: file.buffer,
-      });
-      result.content = cleanHtml(html);
-
-      // Extract plain text for search
-      const { value: text } = await mammoth.extractRawText({
-        buffer: file.buffer,
-      });
-      result.extractedText = text.substring(0, 50000);
-      break;
+  } catch (error) {
+    if (result.fileKey) {
+      await cleanupUploadedFile(result.fileKey, error);
     }
+    throw error;
   }
 
   return result;
@@ -142,9 +156,14 @@ export const getNoteById = async (id) => {
 
   if (!note) throw new AppError('Note not found', 404);
 
-  // Generate signed URL for PDF/DOCX originals
+  // Generate a fresh signed URL on each request; never persist it.
   if (note.fileKey) {
-    note.signedUrl = await storage.getSignedUrl(note.fileKey);
+    try {
+      note.signedUrl = await storage.getSignedUrl(note.fileKey);
+    } catch {
+      note.fileUnavailable = true;
+      note.fileError = 'File unavailable';
+    }
   }
 
   return note;
@@ -177,7 +196,15 @@ export const createNote = async (body, file, userId) => {
     throw new AppError('Either a file or markdown content is required', 400);
   }
 
-  const note = await Note.create(noteData);
+  let note;
+  try {
+    note = await Note.create(noteData);
+  } catch (error) {
+    if (noteData.fileKey) {
+      await cleanupUploadedFile(noteData.fileKey, error);
+    }
+    throw error;
+  }
   return note.populate('subject', 'name slug');
 };
 
@@ -191,16 +218,25 @@ export const updateNote = async (id, body, file) => {
     if (!subjectExists) throw new AppError('Subject not found', 404);
   }
 
-  // If a new file is uploaded, process it and delete the old R2 object
+  // Save a replacement before deleting the currently referenced object.
   if (file) {
     const processed = await processFile(file);
-
-    // Delete old R2 object if it exists and is being replaced
-    if (existing.fileKey) {
-      await storage.deleteFile(existing.fileKey);
+    const oldFileKey = existing.fileKey;
+    Object.assign(existing, body, processed);
+    try {
+      await existing.save();
+    } catch (error) {
+      if (processed.fileKey) {
+        await cleanupUploadedFile(processed.fileKey, error);
+      }
+      throw error;
     }
 
-    Object.assign(existing, body, processed);
+    if (oldFileKey) {
+      await storage.deleteFile(oldFileKey);
+    }
+
+    return existing.populate('subject', 'name slug');
   } else {
     // Text-only update
     if (body.content !== undefined) {
@@ -220,12 +256,12 @@ export const deleteNote = async (id) => {
   const note = await Note.findById(id);
   if (!note) throw new AppError('Note not found', 404);
 
-  // Delete R2 object if present
+  await note.deleteOne();
+
   if (note.fileKey) {
     await storage.deleteFile(note.fileKey);
   }
 
-  await note.deleteOne();
   return note;
 };
 
@@ -255,30 +291,9 @@ export const searchNotes = async ({ q, page, limit }) => {
     Note.countDocuments({ $text: { $search: q } }),
   ]);
 
-  // Add simple snippet highlighting
   const results = notes.map((note) => {
-    const searchTerms = q.toLowerCase().split(/\s+/);
     const source = note.extractedText || note.content || note.title;
-    let snippet = '';
-
-    // Find the first occurrence of any search term and extract surrounding context
-    for (const term of searchTerms) {
-      const idx = source.toLowerCase().indexOf(term);
-      if (idx !== -1) {
-        const start = Math.max(0, idx - 80);
-        const end = Math.min(source.length, idx + term.length + 80);
-        snippet = (start > 0 ? '...' : '') +
-          source.substring(start, end) +
-          (end < source.length ? '...' : '');
-        break;
-      }
-    }
-
-    if (!snippet) {
-      snippet = source.substring(0, 160) + (source.length > 160 ? '...' : '');
-    }
-
-    return { ...note, snippet };
+    return { ...note, snippet: createSearchSnippet(source, q) };
   });
 
   return {

@@ -3,14 +3,13 @@ import AppError from '../utils/AppError.js';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
-const ALLOWED_MIMES = new Set([
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-  'text/markdown',
-  'text/plain', // some systems send .md as text/plain
-]);
-
-const ALLOWED_EXTENSIONS = /\.(pdf|docx|md)$/i;
+const ALLOWED_FILE_TYPES = {
+  '.pdf': new Set(['application/pdf']),
+  '.docx': new Set([
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ]),
+  '.md': new Set(['text/markdown', 'text/plain']),
+};
 
 /**
  * Multer configured with memory storage, size limit, and MIME + extension allowlist.
@@ -20,14 +19,14 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (_req, file, cb) => {
-    const mimeOk = ALLOWED_MIMES.has(file.mimetype);
-    const extOk = ALLOWED_EXTENSIONS.test(file.originalname);
+    const extension = file.originalname.slice(file.originalname.lastIndexOf('.')).toLowerCase();
+    const allowedMimes = ALLOWED_FILE_TYPES[extension];
 
-    if (mimeOk || extOk) {
+    if (allowedMimes?.has(file.mimetype)) {
       return cb(null, true);
     }
 
-    cb(new AppError('Only .pdf, .docx, and .md files are allowed', 400));
+    cb(new AppError('Upload a .pdf, .docx, or .md file with its matching file type', 400));
   },
 });
 

@@ -52,7 +52,7 @@ const seed = async () => {
     ]);
     console.log('   ✅ Subjects created');
 
-    // ── Sample notes (markdown only — no R2 needed for seeding) ─
+    // ── Sample notes (markdown only — no file storage needed) ─
     await Note.create([
       {
         title: 'Introduction to Calculus',

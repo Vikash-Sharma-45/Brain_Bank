@@ -15,6 +15,7 @@ import {
   Search,
   ArrowRight,
   BookOpen,
+  Trash2,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -24,7 +25,7 @@ import { cn } from '../lib/utils';
 
 export function SubjectDetail() {
   const { id } = useParams();
-  const { user, refetchUser } = useAuth();
+  const { user, isAdmin, refetchUser } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
@@ -43,10 +44,15 @@ export function SubjectDetail() {
   });
 
   // Fetch all notes for this subject
-  const { data: notesData, isLoading: loadingNotes } = useQuery({
+  const {
+    data: notesData,
+    isLoading: loadingNotes,
+    isError: notesError,
+    refetch: refetchNotes,
+  } = useQuery({
     queryKey: ['notes', { subject: id }],
     queryFn: async () => {
-      const res = await api.get(`/api/notes?subject=${id}&limit=100`);
+      const res = await api.get(`/api/notes?subject=${id}&limit=50`);
       return res.data?.notes || [];
     },
   });
@@ -72,6 +78,26 @@ export function SubjectDetail() {
       });
     },
   });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: (noteId) => api.delete(`/api/notes/${noteId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      queryClient.invalidateQueries({ queryKey: ['note'] });
+      queryClient.invalidateQueries({ queryKey: ['recentNotes'] });
+      queryClient.invalidateQueries({ queryKey: ['userBookmarks'] });
+      showToast({ title: 'Note deleted', description: 'The note has been removed.', variant: 'success' });
+    },
+    onError: (error) => {
+      showToast({ title: 'Could not delete note', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  function handleDeleteNote(note) {
+    if (window.confirm(`Delete "${note.title}"? This cannot be undone.`)) {
+      deleteNoteMutation.mutate(note._id);
+    }
+  }
 
   // Extract all unique tags across notes for filtering
   const allTags = useMemo(() => {
@@ -267,6 +293,16 @@ export function SubjectDetail() {
         <div className="py-20 flex justify-center">
           <Spinner size="lg" />
         </div>
+      ) : notesError ? (
+        <Card className="p-8 text-center">
+          <h3 className="text-base font-semibold text-foreground">Could not load notes</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Check your connection and try again.
+          </p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => refetchNotes()}>
+            Retry
+          </Button>
+        </Card>
       ) : chapterNames.length === 0 ? (
         <Card className="p-12 text-center border-dashed">
           <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
@@ -327,27 +363,45 @@ export function SubjectDetail() {
                             </div>
 
                             {/* Bookmark Toggle Button */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                bookmarkMutation.mutate({
-                                  noteId: note._id,
-                                  isBookmarked: bookmarked,
-                                });
-                              }}
-                              className={cn(
-                                'p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors',
-                                bookmarked && 'text-amber-500'
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  bookmarkMutation.mutate({
+                                    noteId: note._id,
+                                    isBookmarked: bookmarked,
+                                  });
+                                }}
+                                className={cn(
+                                  'p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors',
+                                  bookmarked && 'text-amber-500'
+                                )}
+                                aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark note'}
+                                title={bookmarked ? 'Bookmarked' : 'Bookmark'}
+                              >
+                                <Bookmark
+                                  className={cn('h-4 w-4', bookmarked && 'fill-current')}
+                                />
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    handleDeleteNote(note);
+                                  }}
+                                  disabled={deleteNoteMutation.isPending}
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                                  aria-label={`Delete ${note.title}`}
+                                  title="Delete note"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               )}
-                              aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark note'}
-                              title={bookmarked ? 'Bookmarked' : 'Bookmark'}
-                            >
-                              <Bookmark
-                                className={cn('h-4 w-4', bookmarked && 'fill-current')}
-                              />
-                            </button>
+                            </div>
                           </div>
 
                           <Link to={`/notes/${note._id}`} className="block mt-2">

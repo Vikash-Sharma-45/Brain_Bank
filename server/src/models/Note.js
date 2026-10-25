@@ -16,7 +16,7 @@ const noteSchema = new mongoose.Schema(
     },
     // Markdown raw text or sanitised HTML from docx conversion
     content: { type: String, default: '' },
-    // R2 object key for pdf/docx originals
+    // Private storage object key for pdf/docx originals
     fileKey: { type: String, default: '' },
     originalFilename: { type: String, default: '' },
     fileSize: { type: Number, default: 0 },

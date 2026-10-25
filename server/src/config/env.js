@@ -16,11 +16,13 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
 
-  R2_ACCOUNT_ID: z.string().min(1, 'R2_ACCOUNT_ID is required'),
-  R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
-  R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
-  R2_BUCKET_NAME: z.string().default('studynotes'),
-  R2_PUBLIC_URL: z.string().optional().default(''),
+  SUPABASE_URL: z
+    .string({ required_error: 'SUPABASE_URL is required' })
+    .url('SUPABASE_URL must be a valid URL'),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string({ required_error: 'SUPABASE_SERVICE_ROLE_KEY is required' })
+    .min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
+  SUPABASE_BUCKET: z.string().default('notes-files'),
 
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
 
